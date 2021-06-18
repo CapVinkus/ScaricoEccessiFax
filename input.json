@@ -1,0 +1,43 @@
+{
+	"jobName": "scaricoEccessiFax",
+	"jobXmlFile": "job-ScaricoEccessiFax.xml",
+	"jarName": "ScaricoEccessiFax-0.0.1.jar",
+	"params": {
+		"query.select": {
+			"value": "SELECT NUMERO_PRATICA,NUMERO_AUTORIZZAZIONE,ID_FAX,SCATOLA FROM FIND_FAX_ACCELERA where STATO = 'RIC' AND TIPO_INSERIMENTO = 'ONL'"
+		},
+		"query.update": {
+			"value": "UPDATE FIND_FAX_ACCELERA SET STATO = 'RIC', DATA_INVIO = SYSDATE WHERE STATO = 'RIC' and tipo_inserimento = 'ONL' and NUMERO_PRATICA = :NUMERO_PRATICA and ID_FAX = :ID_FAX"
+		},
+		"mail.smtp": {
+			"value": "cgssrv01.gepo.intranet"
+		},
+		"mail.titolo": {
+			"value": "Scarico Eccessi Fax"
+		},
+		"mail.from": {
+			"value": "server@c-global.it"
+		},
+		"conn.driver": {
+			"value": "oracle.jdbc.driver.OracleDriver"
+		},
+		"mail.indirizzo": {
+			"value": "mario.russo@c-global.it"
+		},
+		"conn.url": {
+			"value": "jdbc:oracle:thin:@gpocbs1o.ced.it:1527:GPOCBS1O"
+		},
+		"conn.username": {
+			"value": "proc_arch"
+		},
+		"conn.password": {
+			"value": "proc_arch"
+		},
+		"dir.main": {
+			"value": "C:\\Users\\axc0824\\Desktop\\job\\scaricoEccessiFax\\salvi\\"
+		},
+		"file.name": {
+			"value": "ScaricoEccessiFax.txt"
+		}
+	}
+}
