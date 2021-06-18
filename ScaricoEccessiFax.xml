@@ -1,0 +1,130 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch
+	http://www.springframework.org/schema/batch/spring-batch.xsd 
+	http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/util
+	http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<description>
+		Lettura da proc_arch, inserimento in un file txt dei
+		record modificati e invio per email
+	</description>
+
+	<!-- === JOB === -->
+	<job id="scaricoEccessiFax"
+		xmlns="http://www.springframework.org/schema/batch">
+		<step id="stepDBReadeWriter" next="stepSendMail">
+			<tasklet>
+				<chunk reader="dbReader" writer="composite"
+					commit-interval="1" />
+			</tasklet>
+		</step>
+		<step id="stepSendMail">
+			<tasklet ref="sendMail" />
+		</step>
+	</job>
+
+	<!-- === READER === -->
+
+	<bean id="dbReader"
+		class="org.springframework.batch.item.database.JdbcCursorItemReader"
+		scope="step">
+		<property name="dataSource" ref="jobDataSource" />
+		<property name="sql" value="#{jobParameters['query.select']}" />
+		<property name="rowMapper">
+			<bean class="org.springframework.jdbc.core.ColumnMapRowMapper" />
+		</property>
+	</bean>
+
+	<bean id="composite"
+		class="org.springframework.batch.item.support.CompositeItemWriter"
+		scope="step">
+		<property name="delegates">
+			<list>
+				<ref bean="fileWriter" />
+				<ref bean="dbUpdate" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="fileWriter"
+		class="org.springframework.batch.item.file.FlatFileItemWriter"
+		scope="step">
+
+		<property name="resource"
+			value="file:#{jobParameters['dir.main']}/#{jobParameters['file.name']}" />
+		<property name="lineAggregator">
+			<bean
+				class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+				<property name="delimiter" value=";" />
+				<property name="fieldExtractor">
+					<bean
+						class="org.springframework.batch.item.file.transform.PassThroughFieldExtractor" />
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="dbUpdate"
+		class="org.springframework.batch.item.database.JdbcBatchItemWriter"
+		scope="step">
+		<property name="dataSource" ref="jobDataSource" />
+		<property name="sql" value="#{jobParameters['query.update']}" />
+		<property name="itemPreparedStatementSetter">
+			<bean
+				class="org.springframework.batch.item.database.support.ColumnMapItemPreparedStatementSetter" />
+		</property>
+	</bean>
+
+	<!-- === MAILFAILED SENDER TASKLET === -->
+	<bean id="sendMail"
+		class="it.gepo.engine.support.tasklet.SendMailTasklet" scope="step">
+		<property name="mailSender" ref="mailSender"></property>
+
+		<property name="from" value="#{jobParameters['mail.from']}"></property>
+		<property name="recipients"
+			value="#{jobParameters['mail.indirizzo']}"></property>
+		<property name="title"
+			value="#{jobParameters['mail.titolo']}"></property>
+		<property name="attachment"
+			value="file:#{jobParameters['dir.main']}/#{jobParameters['file.name']}" />
+	</bean>
+
+	<!-- === MAIL SENDER === -->
+	<bean id="mailSender"
+		class="org.springframework.mail.javamail.JavaMailSenderImpl"
+		scope="job">
+		<property name="host" value="#{jobParameters['mail.smtp']}" />
+
+	</bean>
+
+	<!-- === DATASOURCE === -->
+	<bean id="jobDataSource"
+		class="org.apache.commons.dbcp.BasicDataSource" scope="job">
+		<property name="driverClassName"
+			value="#{jobParameters['conn.driver']}" />
+		<property name="url" value="#{jobParameters['conn.url']}" />
+		<property name="username"
+			value="#{jobParameters['conn.username']}" />
+		<property name="password"
+			value="#{jobParameters['conn.password']}" />
+	</bean>
+
+	<bean id="validator"
+		class="org.springframework.batch.core.job.DefaultJobParametersValidator">
+		<property name="requiredKeys">
+			<list>
+				<value>commit.interval</value>
+				<value>conn.url</value>
+				<value>conn.username</value>
+				<value>conn.password</value>
+				<value>conn.driver</value>
+			</list>
+		</property>
+	</bean>
+</beans>
